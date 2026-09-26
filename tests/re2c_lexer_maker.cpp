@@ -102,15 +102,15 @@ static int genCode(const std::string& iniFile, const std::string& outDir){
 }
 
 int main(int argc, char* argv[]){
-  if(argc == 2){
+  if(argc == 1){
+    return printUsage();
+  }else if(argc == 2){
     if(std::string("-v") == argv[1] || std::string("--version") == argv[1]){
       return printVersion();
     }else if(std::string("-h") == argv[1] || std::string("--help") == argv[1]){
       return printUsage();
     }else if(std::string("-H") == argv[1] || std::string("--HELP") == argv[1]){
-      printUsage();
-      printExample();
-      return 0;
+      return printExample();
     }
   }else if(argc == 5){
     if(std::string("-i") == argv[1] || std::string("-input") == argv[1]){
@@ -123,6 +123,5 @@ int main(int argc, char* argv[]){
   }
 
   printf("[Error] Invalid parameters.\n\n");
-  
   return 1;
 }
