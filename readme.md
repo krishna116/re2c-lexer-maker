@@ -9,7 +9,7 @@ re2c-lexer-maker -d <directory> -t <type> -i <config.ini>
 
 Options:
 -i <config.ini>     Input config file.
--<                  Input config file from stdin.
+-x                  Input config file from stdin.
 -d <directory>      Specify output file directory.
 -t <type>           Specify output file type, and the file type can be
                     one of [token.h, lexer.h, lexer.l, cmake.txt, all].
