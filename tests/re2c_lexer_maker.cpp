@@ -16,7 +16,7 @@ static int printUsage(){
   printf("\n");
   printf("Options:\n");
   printf("-i <config.ini>     Input config file.\n");
-  printf("-<                  Input config file from stdin.\n");
+  printf("-x                  Input config file from stdin.\n");
   printf("-d <directory>      Specify output file directory.\n");
   printf("-t <type>           Specify output file type, and the file type can be\n");
   printf("                    one of [token.h, lexer.h, lexer.l, cmake.txt, all].\n");
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]){
       }else{
         return printError("Invalid parameters.");
       }
-    }else if(match("->", arg) || match("-", arg)){
+    }else if(match("-x", arg) || match("-", arg)){
       inputConfigFromStdin = true;
     }else if(match("-d", arg) || match("--dir", arg)){
       if(i+1 < argc){
