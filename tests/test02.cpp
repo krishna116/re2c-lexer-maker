@@ -28,25 +28,21 @@ int main(){
   }
 
   CodeGenerator codeGenerator;
-  std::string tokenHeaderCode;
-  std::string classHeaderCode; 
-  std::string classLexCode;
-  std::string cmakeCode;
-  if(codeGenerator.genCode(cfg, tokenHeaderCode, classHeaderCode, classLexCode, cmakeCode)){
-    std::cout << "//[tokenHeaderCode]";
-    std::cout << tokenHeaderCode << std::endl;
-    std::cout << "------------------------------------------------------------------\n";
+  std::string tokenHeaderCode = codeGenerator.genTokenHeaderCode(cfg);
+  std::string classHeaderCode = codeGenerator.genClassHeaderCode(cfg);
+  std::string classLexCode = codeGenerator.genClassLexCode(cfg);
+  std::string cmakeCode = codeGenerator.genCmakeCode(cfg);
+  std::cout << "//[tokenHeaderCode]";
+  std::cout << tokenHeaderCode << std::endl;
+  std::cout << "------------------------------------------------------------------\n";
 
-    // std::cout << "//[classHeaderCode]";
-    // std::cout << classHeaderCode << std::endl;
-    // std::cout << "------------------------------------------------------------------\n";
+  // std::cout << "//[classHeaderCode]";
+  // std::cout << classHeaderCode << std::endl;
+  // std::cout << "------------------------------------------------------------------\n";
 
-    // std::cout << "//[classLexCode]";
-    // std::cout << classLexCode << std::endl;
-    // std::cout << "------------------------------------------------------------------\n";
-  }else{
-    std::cout <<codeGenerator.getLastError() <<std::endl;
-  }
+  // std::cout << "//[classLexCode]";
+  // std::cout << classLexCode << std::endl;
+  // std::cout << "------------------------------------------------------------------\n";
 
   return 0;
 }
