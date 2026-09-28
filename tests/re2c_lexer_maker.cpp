@@ -1,20 +1,28 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <cctype>
+#include <cstring>
+#include <exception>
 
 #include "template/config.h"
 #include "LexerConfigParser.h"
 #include "CodeGenerator.h"
 
 static int printUsage(){
-  printf("re2c-lexer-maker -i <file.ini> -o <directory>\n");
+  printf("Usage:\n");
+  printf("re2c-lexer-maker -i <config.ini>\n");
+  printf("re2c-lexer-maker -d <directory> -t <type> -i <config.ini>\n");
   printf("\n");
   printf("Options:\n");
-  printf("-i,--input  <file.ini>    Specify config file.\n");
-  printf("-o,--output <directory>   Specify output dir.\n");
-  printf("-h,--help                 Print this help.\n");
-  printf("-H,--HELP                 Print help with example.\n");
-  printf("-v,--version              Print version.\n");
+  printf("-i <config.ini>     Input config file.\n");
+  printf("-<                  Input config file from stdin.\n");
+  printf("-d <directory>      Specify output file directory.\n");
+  printf("-t <type>           Specify output file type, and the file type can be\n");
+  printf("                    one of [token.h, lexer.h, lexer.l, cmake.txt, all].\n");
+  printf("-h,--help           Print this help.\n");
+  printf("-?,--help-example   Print config.ini example.\n");
+  printf("-v,--version        Print version.\n");
   printf("\n");
   return 0;
 }
@@ -42,6 +50,14 @@ static int printExample(){
   return 0;
 }
 
+static std::string toLower(const std::string& text){
+  std::string str;
+  for(auto& ch : text){
+    str.push_back(std::tolower(ch));
+  }
+  return str;
+}
+
 static int writeCode(const std::string& stream, const std::filesystem::path& filePath){
   std::ofstream ofs(filePath);
   if(ofs.is_open()){
@@ -52,76 +68,166 @@ static int writeCode(const std::string& stream, const std::filesystem::path& fil
   return 1;
 }
 
-static int genCode(const std::string& iniFile, const std::string& outDir){
-  std::filesystem::path inputFilePath(iniFile);
-  if(inputFilePath.is_relative()){
-    inputFilePath = std::filesystem::current_path();
-    inputFilePath /= iniFile;
-  }
-
-  std::ifstream ifs(inputFilePath);
+static LexerConfig readInput(const std::string &filePathStr) {
   std::string iniText;
-  if(ifs.is_open()){
-    iniText.insert(iniText.end(), (std::istreambuf_iterator<char>(ifs)),std::istreambuf_iterator<char>());
-    ifs.close();
+  if (!filePathStr.empty()) {
+    std::filesystem::path inputFilePath(filePathStr);
+    if (inputFilePath.is_relative()) {
+      inputFilePath = std::filesystem::current_path();
+      inputFilePath /= filePathStr;
+    }
+    std::cerr <<"[Info] Input File Path = " << inputFilePath <<"\n";
+    if(!std::filesystem::exists(inputFilePath)){
+      std::cerr <<"[Error] File doesn't exist:" << inputFilePath << "\n";
+    }
+    FILE* fp = fopen(inputFilePath.string().c_str(), "rb");
+    if (!fp){
+      std::cerr <<"[Error] Cannot read:" << inputFilePath << "\n";
+      return {};
+    }
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    std::cerr <<"[Info] Input file size = " << size <<"\n";
+    fseek(fp, 0, SEEK_SET);
+    iniText.resize(size, 0);
+    fread(iniText.data(), 1, size, fp);
+    fclose(fp);
+  } else {
+    std::string line;
+    while (std::getline(std::cin, line)) {
+      line.push_back('\n');
+      iniText += line;
+    }
   }
 
   LexerConfigParser parser;
   auto cfg = parser.parse(iniText);
-  if(parser.hasError()){
-    std::cout << parser.getLastError() << "\n";
-    return 2;
+  if (parser.hasError()) {
+    std::cerr << parser.getLastError() << "\n";
+    return {};
   }
+  return cfg;
+}
 
-  CodeGenerator codeGenerator;
+static int genCode(const LexerConfig& cfg,  const std::string& outDir, const std::string& fileType){
   std::string tokenHeaderCode;
   std::string classHeaderCode; 
   std::string classLexCode;
   std::string cmakeCode;
-  if(!codeGenerator.genCode(cfg, tokenHeaderCode, classHeaderCode, classLexCode, cmakeCode)){
-    std::cout << codeGenerator.getLastError() << "\n";
-    return 4;
+  CodeGenerator codeGenerator;
+
+  // Generate all code.
+  if(fileType == "token" || fileType == "token.h"){
+    tokenHeaderCode = codeGenerator.genTokenHeaderCode(cfg);
+  }else if(fileType == "lexer.h"){
+    classHeaderCode = codeGenerator.genClassHeaderCode(cfg);
+  }else if(fileType == "lexer.l" || fileType == "lexer.lex"){
+    classLexCode = codeGenerator.genClassLexCode(cfg);
+  }else if(fileType == "cmake" || fileType == "cmake.txt" || fileType == "cmakelists.txt"){
+    cmakeCode = codeGenerator.genCmakeCode(cfg);
+  }else if(fileType == "all"){
+    tokenHeaderCode = codeGenerator.genTokenHeaderCode(cfg);
+    classHeaderCode = codeGenerator.genClassHeaderCode(cfg);
+    classLexCode = codeGenerator.genClassLexCode(cfg);
+    cmakeCode = codeGenerator.genCmakeCode(cfg);
+  }else{
+    // Default file type.
+    classLexCode = codeGenerator.genClassLexCode(cfg);
   }
 
-  std::filesystem::path path(outDir);
-  auto tokenFilePath = path / "Token.h";
-  auto classHeaderPath = path / std::string(cfg.lexerClassName + ".h");
-  auto classLexPath = path / std::string(cfg.lexerClassName + ".l");
-  auto cmakePath = path / "CMakeLists.txt";
-  int count = 0;
-  std::filesystem::create_directories(path);
-  count += writeCode(tokenHeaderCode, tokenFilePath);
-  count += writeCode(classHeaderCode, classHeaderPath);
-  count += writeCode(classLexCode, classLexPath);
-  count += writeCode(cmakeCode, cmakePath);
-  if(count != 0){
-    printf("[Error] output code failed.\n");
+  // Output all code.
+  if(!outDir.empty()){
+    std::filesystem::path path(outDir);
+    auto tokenFilePath = path / "Token.h";
+    auto classHeaderPath = path / std::string(cfg.lexerClassName + ".h");
+    auto classLexPath = path / std::string(cfg.lexerClassName + ".l");
+    auto cmakePath = path / "CMakeLists.txt";
+    try {
+      std::filesystem::create_directories(path);
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << '\n';
+      return 1;
+    }
+    int count = 0;
+    if(!tokenHeaderCode.empty()) count += writeCode(tokenHeaderCode, tokenFilePath);
+    if(!classHeaderCode.empty()) count += writeCode(classHeaderCode, classHeaderPath);
+    if(!classLexCode.empty()) count += writeCode(classLexCode, classLexPath);
+    if(!cmakeCode.empty()) count += writeCode(cmakeCode, cmakePath);
+    if(count != 0){
+      std::cerr << "[Error] Output code failed.\n";
+    }
+    return count;
+  }else{
+    if(!tokenHeaderCode.empty()) std::cout << tokenHeaderCode;
+    if(!classHeaderCode.empty()) std::cout << classHeaderCode;
+    if(!classLexCode.empty()) std::cout << classLexCode;
+    if(!cmakeCode.empty()) std::cout << cmakeCode;
   }
-
-  return count;
+  return 0;
 }
 
 int main(int argc, char* argv[]){
-  if(argc == 1){
-    return printUsage();
-  }else if(argc == 2){
-    if(std::string("-v") == argv[1] || std::string("--version") == argv[1]){
-      return printVersion();
-    }else if(std::string("-h") == argv[1] || std::string("--help") == argv[1]){
+  std::string inputConfigFile;
+  bool inputConfigFromStdin = false;
+  std::string outputDir;
+  std::string outputFileType;
+
+  auto match = [](const char* str1, const char* str2){
+    std::string a = toLower(str1);
+    std::string b = toLower(str2);
+    return a == b;
+  };
+
+  auto printError = [](const char* msg){
+    std::cerr << msg << "\n";
+    return 1;
+  };
+
+  if(argc == 1) return printUsage();
+  for(int i = 1; i < argc; ++i){
+    auto& arg = argv[i];
+    if(match("-h", arg) || match("-help", arg) || match("--help", arg)){
       return printUsage();
-    }else if(std::string("-H") == argv[1] || std::string("--HELP") == argv[1]){
+    }else if(match("-?", arg) || match("--help-example", arg)){
       return printExample();
-    }
-  }else if(argc == 5){
-    if(std::string("-i") == argv[1] || std::string("-input") == argv[1]){
-      if(std::string("-o") == argv[3] || std::string("-output") == argv[3]){
-        if(std::string(argv[2]) != argv[4]){
-          return genCode(argv[2], argv[4]);
-        }
+    }else if(match("-v", arg) || match("--version", arg)){
+      return printVersion();
+    }else if(match("-i", arg) || match("--input", arg)){
+      if(i+1 < argc){
+        inputConfigFile = argv[++i];
+        continue;
+      }else{
+        return printError("Invalid parameters.");
       }
+    }else if(match("->", arg) || match("-", arg)){
+      inputConfigFromStdin = true;
+    }else if(match("-d", arg) || match("--dir", arg)){
+      if(i+1 < argc){
+        outputDir = argv[++i];
+        continue;
+      }else{
+        return printError("Invalid parameters.");
+      }
+    }else if(match("-t", arg) || match("--type", arg)){
+      if(i+1 < argc){
+        outputFileType = argv[++i];
+        continue;
+      }else{
+        return printError("Invalid parameters.");
+      }
+    }else{
+      return printError("Invalid parameters.");
     }
   }
 
-  printf("[Error] Invalid parameters.\n\n");
-  return 1;
+  if(inputConfigFile.empty() && inputConfigFromStdin == false){
+    return printError("Please input a config file.");
+  }
+
+  auto cfg = readInput(inputConfigFile);
+  if(cfg.lexerClassName.empty()) return -1;
+  auto result = genCode(cfg, outputDir, outputFileType);
+  std::cerr <<"[info] Generate code " << (result == 0? "success.":"failed.") <<"\n";
+
+  return result;
 }
