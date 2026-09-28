@@ -53,10 +53,7 @@ static TokenTypeNameArray getUniqueTokenTypeNameArray(const LexerConfig& cfg){
   return uniqueNameArray;
 }
 
-/**
- * Generate Token.h
- */
-static std::string genTokenHeaderCode(const LexerConfig& cfg){
+std::string CodeGenerator::genTokenHeaderCode(const LexerConfig& cfg){
   const TokenTypeNameArray tokenTypeNameArray = getUniqueTokenTypeNameArray(cfg);
   const std::size_t size = tokenTypeNameArray.size();
   const std::string CLASSNAME = toUpper(cfg.lexerClassName);
@@ -89,10 +86,7 @@ static std::string genTokenHeaderCode(const LexerConfig& cfg){
   return code;
 }
 
-/**
- * Generate MyLexer.h
- */
-static std::string genClassHeaderCode(const LexerConfig& cfg){
+std::string CodeGenerator::genClassHeaderCode(const LexerConfig& cfg){
   const std::string CLASSNAME = toUpper(cfg.lexerClassName);
   std::string code = ClassHeaderCodeTemplate;
   replace(code, PlaceHolder::CLASSNAME, CLASSNAME);
@@ -100,10 +94,7 @@ static std::string genClassHeaderCode(const LexerConfig& cfg){
   return code;
 }
 
-/**
- * Generate MyLexer.l
- */
-static std::string genClassLexCode(const LexerConfig& cfg){
+std::string CodeGenerator::genClassLexCode(const LexerConfig& cfg){
   auto getRuleDefine = [&](const std::string& ruleName, 
                            std::size_t nspace, 
                            const std::string& regexPattern){
@@ -171,25 +162,8 @@ static std::string genClassLexCode(const LexerConfig& cfg){
   return code;
 }
 
-/**
- * Generate CMakeLists.txt
- */
-static std::string genCmakeCode(const LexerConfig& cfg){
+std::string CodeGenerator::genCmakeCode(const LexerConfig& cfg){
   std::string code = CmakeCodeTemplate;
   replace(code, PlaceHolder::ClassName, cfg.lexerClassName);
   return code;
-}
-
-/**
- * Generate token.h, MyLexer.h, MyLexer.l, CMakeLists.txt
- */
-bool CodeGenerator::genCode(const LexerConfig &cfg,
-                            std::string &tokenHeaderCode,
-                            std::string &classHeaderCode,
-                            std::string &classLexCode, std::string &cmakeCode) {
-  tokenHeaderCode = genTokenHeaderCode(cfg);
-  classHeaderCode = genClassHeaderCode(cfg);
-  classLexCode = genClassLexCode(cfg);
-  cmakeCode = genCmakeCode(cfg);
-  return true;
 }
