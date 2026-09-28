@@ -4,13 +4,18 @@ It is used to generate C++ lexer class, and you need to install [re2c](https://r
 
 ## Usage
 ```BASH
-re2c-lexer-maker -i <file.ini> -o <directory>
+re2c-lexer-maker -i <config.ini>
+re2c-lexer-maker -d <directory> -t <type> -i <config.ini>
 
 Options:
--i,--input  <file.ini>    Specify config file.
--o,--output <directory>   Specify output code directory.
--h,--help                 Print this help.
--v,--version              Print version.
+-i <config.ini>     Input config file.
+-<                  Input config file from stdin.
+-d <directory>      Specify output file directory.
+-t <type>           Specify output file type, and the file type can be
+                    one of [token.h, lexer.h, lexer.l, cmake.txt, all].
+-h,--help           Print this help.
+-?,--help-example   Print config.ini example.
+-v,--version        Print version.
 
 # Start example of file.ini =====================
   LexerClassName = MyLexer;
