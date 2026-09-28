@@ -5,11 +5,10 @@
 struct LexerConfig;
 class CodeGenerator{
 public:
-  bool genCode(const LexerConfig& cfg,
-                std::string& tokenHeaderCode,
-                std::string& classHeaderCode,
-                std::string& classLexCode,
-                std::string& cmakeCode);
+  std::string genTokenHeaderCode(const LexerConfig& cfg);
+  std::string genClassHeaderCode(const LexerConfig& cfg);
+  std::string genClassLexCode(const LexerConfig& cfg);
+  std::string genCmakeCode(const LexerConfig& cfg);
 
   bool hasError(){
     return !mLastError.empty();
