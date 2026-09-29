@@ -19,8 +19,9 @@ private:
   };
   using LineArray = std::vector<Line>;
 
-  LineArray readLines(const std::string &str);
-  std::string trimSpace(const std::string &str);
+  LineArray readLines(const std::string &text);
+  std::string trimSpace(const std::string &line);
+  std::string trimTailComment(const std::string& line);
   std::string getLexerClassName(const Line& line);
   std::string getLexerCharType(const Line& line);
   std::string getTokenTypeName(const Line& line);
