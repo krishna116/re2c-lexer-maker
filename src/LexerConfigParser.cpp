@@ -14,6 +14,10 @@ inline bool is_az_AZ_09_(const char& ch){
   return (is_az_AZ_(ch)  || '0' <= ch && ch <= '9');
 }
 
+inline bool isCommentChar(char c){
+  return c == ';' || c == '#' || c == '/';
+}
+
 inline bool lineStartWith(const std::string& line, const std::string& token){
   auto tokenSize = token.size();
   return tokenSize <= line.size() && line.substr(0, tokenSize) == token;
@@ -88,31 +92,93 @@ LexerConfig LexerConfigParser::parse(const std::string &iniText) {
   return cfg;
 }
 
-LexerConfigParser::LineArray LexerConfigParser::readLines(const std::string &str) {
+LexerConfigParser::LineArray LexerConfigParser::readLines(const std::string &text) {
   LineArray lineArray;
-  std::stringstream ss{str};
-  std::string text;
+  std::stringstream ss{text};
+  std::string line;
   size_t i = 0;
-  while (std::getline(ss, text)) {
+  while (std::getline(ss, line)) {
     ++i;
-    auto trimmed = trimSpace(text);
-    if (trimmed.empty() || (trimmed[0] == ';' || trimmed[0] == '#' || trimmed[0] == '/')) {
+    auto trimSpaceLine = trimSpace(line);
+    if (trimSpaceLine.empty() || isCommentChar(trimSpaceLine[0])) {
       continue;
     }
-    lineArray.push_back({i, trimmed});
+    auto trimTailCommentLine = trimTailComment(trimSpaceLine);
+    if(!trimTailCommentLine.empty()) lineArray.push_back({i, trimTailCommentLine});
   }
   return lineArray;
 }
 
-std::string LexerConfigParser::trimSpace(const std::string &str) {
-  auto begin = str.find_first_not_of(" \t\v\f\r\n");
+std::string LexerConfigParser::trimSpace(const std::string &line) {
+  auto begin = line.find_first_not_of(" \t\v\f\r\n");
   if (begin != std::string::npos) {
-    auto end = str.find_last_not_of(" ;\t\v\f\r\n");
+    auto end = line.find_last_not_of(" \t\v\f\r\n");
     if(end != std::string::npos){
-      return str.substr(begin, end - begin + 1);
+      return line.substr(begin, end - begin + 1);
     }
   }
   return {};
+}
+
+std::string LexerConfigParser::trimTailComment(const std::string &line) {
+  int depthParentheses = 0;
+  int depthSquareBracket = 0;
+  int depthCurlyBrackets = 0;
+  bool inStringA = false;
+  bool inStringB = false;
+
+  auto isComment = [&](const char &c) {
+    if (!isCommentChar(c))
+      return false;
+    if (depthParentheses > 0)
+      return false;
+    if (depthSquareBracket > 0)
+      return false;
+    if (depthCurlyBrackets > 0)
+      return false;
+    if (inStringA)
+      return false;
+    if (inStringB)
+      return false;
+    return true;
+  };
+  std::size_t sz = line.size();
+  for (std::size_t i = 0; i < sz; ++i) {
+    auto c = line[i];
+    if (c == '\\') {
+      if (i + 1 < sz) {
+        i += 1;
+        continue;
+      }
+    } else if (c == '(') {
+      depthParentheses += 1;
+    } else if (c == ')') {
+      depthParentheses -= 1;
+    } else if (c == '[') {
+      depthSquareBracket += 1;
+    } else if (c == ']') {
+      depthSquareBracket -= 1;
+    } else if (c == '{') {
+      depthCurlyBrackets += 1;
+    } else if (c == '}') {
+      depthCurlyBrackets -= 1;
+    } else if (c == '"') {
+      if(depthSquareBracket == 0 || !inStringB){
+        inStringA = !inStringA;
+      }
+    } else if (c == '\'') {
+      if(depthSquareBracket == 0 || !inStringA){
+        inStringB = !inStringB;
+      }
+    }else if (isComment(c)) {
+      auto subLine = line.substr(0, i);
+      while(!subLine.empty() && std::isspace(subLine.back())){
+        subLine.pop_back();
+      }
+      return subLine;
+    }
+  }
+  return line;
 }
 
 std::string LexerConfigParser::getTokenTypeName(const Line& line){
