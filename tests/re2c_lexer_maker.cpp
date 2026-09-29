@@ -33,20 +33,25 @@ static int printVersion(){
 }
 
 static int printExample(){
-  static const char* example = R"(# Start example of file.ini =====================
-  LexerClassName = MyLexer;
-  LexerCharType  = char;
-  [Key]
-    RegexPattern    = [a-zA-Z_][a-zA-Z0-9_]{0,30};
-    ReturnTokenType = KEY;
-  [Equal]
-    RegexPattern    = "=";
-  [Value]
-    RegexPattern    = [0-9]+;
-    ReturnTokenType = VALUE;
-  [Spaces]
-    RegexPattern    = [ \t\v\f\r\n]+;)";
-  printf("%s\n# End example of file.ini =======================\n\n", example);
+  static const char* example = R"(// Example of MyLexer.ini
+LexerClassName = MyLexer;                         // Lexer class name.
+LexerCharType  = char;                            // Lexer char type.
+
+[Key]                                             // Rule name.
+  RegexPattern    = [a-zA-Z_][a-zA-Z0-9_]{0,30};  // Rule regex pattern.
+  ReturnTokenType = KEY;                          // Return token type( is optional).
+
+[Equal]                                           // Rule name.
+  RegexPattern    = "=";                          // Rule regex pattern.
+
+[Value]                                           // Rule name.
+  RegexPattern    = [0-9]+;                       // Rule regex pattern.
+  ReturnTokenType = VALUE;                        // Return token type
+
+[Spaces]                                          // Rule name.
+  RegexPattern    = [ \t\v\f\r\n]+;               // Rule regex pattern.
+)";
+  printf("%s", example);
   return 0;
 }
 
