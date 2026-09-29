@@ -90,6 +90,5 @@ public:
 
 The generated code can be build with cmake:
 ```BASH
-cmake -S . -B build
-cmake --build build.
+mkdir MyLexerLib && cd MyLexerLib && re2c-lexer-maker -? >> config.ini && re2c-lexer-maker -i config.ini -t all -d . && cmake -S . -B build && cmake --build build
 ```
