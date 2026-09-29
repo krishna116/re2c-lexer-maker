@@ -16,21 +16,6 @@ Options:
 -h,--help           Print this help.
 -?,--help-example   Print config.ini example.
 -v,--version        Print version.
-
-# Start example of file.ini =====================
-  LexerClassName = MyLexer;
-  LexerCharType  = char;
-  [Key]
-    RegexPattern    = [a-zA-Z_][a-zA-Z0-9_]{0,30};
-    ReturnTokenType = KEY;
-  [Equal]
-    RegexPattern    = "=";
-  [Value]
-    RegexPattern    = [0-9]+;
-    ReturnTokenType = VALUE;
-  [Spaces]
-    RegexPattern    = [ \t\v\f\r\n]+;
-# End example of file.ini =======================
 ```
 
 ## Public interface of the generated lexer
