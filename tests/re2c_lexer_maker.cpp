@@ -4,10 +4,21 @@
 #include <cctype>
 #include <cstring>
 #include <exception>
+#include <string>
 
 #include "template/config.h"
 #include "LexerConfigParser.h"
 #include "CodeGenerator.h"
+
+#include "../src/Re2c.h"
+
+std::string toCppCode(const std::string &lexCode) {
+  std::string out;
+  if(Re2c::run(lexCode, out) == 0){
+    return out;
+  }
+  return {};
+}
 
 static int printUsage(){
   printf("Usage:\n");
@@ -118,6 +129,7 @@ static int genCode(const LexerConfig& cfg,  const std::string& outDir, const std
   std::string tokenHeaderCode;
   std::string classHeaderCode; 
   std::string classLexCode;
+  std::string classLexCompiledCode;
   std::string cmakeCode;
   CodeGenerator codeGenerator;
 
@@ -134,6 +146,7 @@ static int genCode(const LexerConfig& cfg,  const std::string& outDir, const std
     tokenHeaderCode = codeGenerator.genTokenHeaderCode(cfg);
     classHeaderCode = codeGenerator.genClassHeaderCode(cfg);
     classLexCode = codeGenerator.genClassLexCode(cfg);
+    classLexCompiledCode = toCppCode(classLexCode);
     cmakeCode = codeGenerator.genCmakeCode(cfg);
   }else{
     // Default file type.
@@ -146,6 +159,7 @@ static int genCode(const LexerConfig& cfg,  const std::string& outDir, const std
     auto tokenFilePath = path / "Token.h";
     auto classHeaderPath = path / std::string(cfg.lexerClassName + ".h");
     auto classLexPath = path / std::string(cfg.lexerClassName + ".l");
+    auto classLexCompiledCodePath = path / std::string(cfg.lexerClassName + ".cpp");
     auto cmakePath = path / "CMakeLists.txt";
     try {
       std::filesystem::create_directories(path);
@@ -157,6 +171,7 @@ static int genCode(const LexerConfig& cfg,  const std::string& outDir, const std
     if(!tokenHeaderCode.empty()) count += writeCode(tokenHeaderCode, tokenFilePath);
     if(!classHeaderCode.empty()) count += writeCode(classHeaderCode, classHeaderPath);
     if(!classLexCode.empty()) count += writeCode(classLexCode, classLexPath);
+    if(!classLexCompiledCode.empty()) count += writeCode(classLexCompiledCode, classLexCompiledCodePath);
     if(!cmakeCode.empty()) count += writeCode(cmakeCode, cmakePath);
     if(count != 0){
       std::cerr << "[Error] Output code failed.\n";
